@@ -1,6 +1,8 @@
-use crate::waker::Waker;
+use crate::{reactor::Reactor, waker::Waker};
 
 pub trait Future {
     type Waker: Waker;
-    fn poll(&self, waker: Self::Waker);
+    type Reactor: Reactor;
+
+    fn poll(&self, reactor: &mut Self::Reactor, waker: Self::Waker);
 }
