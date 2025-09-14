@@ -6,14 +6,13 @@ mod waker;
 mod side;
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::sync::OnceLock;
 
 use future::Future;
-use mio::{net::TcpListener, Events, Interest, Poll, Token};
+use mio::{net::TcpListener, Token};
 use scheduler::LocalScheduler;
 
 use crate::waker::LocalWaker;
-use crate::{scheduler::Scheduler, waker::Waker};
+use crate::scheduler::Scheduler;
 
 use crate::reactor::{LocalReactor, Reactor};
 
@@ -32,7 +31,7 @@ impl Future for Main {
         match self {
             Main::Start => {
                         let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 7777));
-                        let mut listener = TcpListener::bind(addr).unwrap();
+                        let listener = TcpListener::bind(addr).unwrap();
                         reactor.add_event(SERVER, waker, listener);
                         *self = Main::NewConnection;
                     },

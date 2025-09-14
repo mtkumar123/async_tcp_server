@@ -1,5 +1,5 @@
 use crate::{future::Future, reactor::{LocalReactor, Reactor}, waker::{LocalWaker, Waker}};
-use std::{cell::RefCell, marker::PhantomData, rc::Rc, sync::mpsc};
+use std::{cell::RefCell, rc::Rc, sync::mpsc};
 
 pub trait Scheduler{
     type Waker: Waker;

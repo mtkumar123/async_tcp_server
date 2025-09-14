@@ -1,12 +1,8 @@
 use crate::future::Future;
 use crate::waker::{LocalWaker, Waker};
-use core::task;
-use mio::net::TcpStream;
-use mio::{event, Events, Interest, Poll, Registry, Token};
+use mio::{event, Events, Interest, Poll, Token};
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::io::{Read, Write};
-use std::os::fd::RawFd;
 
 pub trait Reactor {
     type Id: Eq + Hash;
