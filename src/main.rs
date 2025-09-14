@@ -18,7 +18,8 @@ use crate::{scheduler::Scheduler, waker::Waker};
 use crate::reactor::{LocalReactor, Reactor};
 
 enum Main {
-    Start
+    Start,
+    NewConnection
 }
 
 const SERVER: Token = Token(0);
@@ -27,12 +28,16 @@ impl Future for Main {
     type Waker = LocalWaker;
     type Reactor = LocalReactor;
 
-    fn poll(&self, reactor: &mut Self::Reactor, waker: Self::Waker) {
+    fn poll(&mut self, reactor: &mut Self::Reactor, waker: Self::Waker) {
         match self {
             Main::Start => {
-                let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 7777));
-                let mut listener = TcpListener::bind(addr).unwrap();
-                reactor.add_event(SERVER, waker, listener);
+                        let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 7777));
+                        let mut listener = TcpListener::bind(addr).unwrap();
+                        reactor.add_event(SERVER, waker, listener);
+                        *self = Main::NewConnection;
+                    },
+            Main::NewConnection => {
+                println!("Things are working")
             },
         }
 

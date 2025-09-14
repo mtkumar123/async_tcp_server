@@ -4,5 +4,5 @@ pub trait Future {
     type Waker: Waker;
     type Reactor: Reactor;
 
-    fn poll(&self, reactor: &mut Self::Reactor, waker: Self::Waker);
+    fn poll(&mut self, reactor: &mut Self::Reactor, waker: Self::Waker);
 }

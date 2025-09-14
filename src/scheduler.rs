@@ -1,5 +1,5 @@
 use crate::{future::Future, reactor::{LocalReactor, Reactor}, waker::{LocalWaker, Waker}};
-use std::{marker::PhantomData, rc::Rc, sync::mpsc};
+use std::{cell::RefCell, marker::PhantomData, rc::Rc, sync::mpsc};
 
 pub trait Scheduler{
     type Waker: Waker;
@@ -9,8 +9,8 @@ pub trait Scheduler{
 }
 
 pub struct LocalScheduler {
-    sender: mpsc::Sender<Rc<dyn Future<Waker = LocalWaker, Reactor = LocalReactor>>>,
-    receiver: mpsc::Receiver<Rc<dyn Future<Waker = LocalWaker, Reactor = LocalReactor>>>,
+    sender: mpsc::Sender<Rc<RefCell<dyn Future<Waker = LocalWaker, Reactor = LocalReactor>>>>,
+    receiver: mpsc::Receiver<Rc<RefCell<dyn Future<Waker = LocalWaker, Reactor = LocalReactor>>>>,
     reactor: LocalReactor
 }
 
@@ -27,7 +27,7 @@ impl Scheduler for LocalScheduler
     type Reactor = LocalReactor;
 
     fn spawn<T: Future<Waker= Self::Waker, Reactor = Self::Reactor> + 'static>(&self, task: T) {
-        self.sender.send(Rc::new(task)).unwrap_or_else(|e| println!("Failed to send {:?}", e))
+        self.sender.send(Rc::new(RefCell::new(task))).unwrap_or_else(|e| println!("Failed to send {:?}", e))
     }
 
     fn run(&mut self) {
@@ -40,7 +40,7 @@ impl Scheduler for LocalScheduler
                 let wake = move || {
                     sender_clone.send(task_clone);
                 };
-                task.poll(&mut self.reactor, LocalWaker(Box::new(wake)));
+                task.borrow_mut().poll(&mut self.reactor, LocalWaker(Box::new(wake)));
             }
             // now wait on the reactor
             self.reactor.wait();
