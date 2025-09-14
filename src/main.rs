@@ -3,7 +3,6 @@ mod future;
 mod reactor;
 mod scheduler;
 mod waker;
-mod side;
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
@@ -17,8 +16,8 @@ use crate::scheduler::Scheduler;
 use crate::reactor::{LocalReactor, Reactor};
 
 enum Main {
-    Start,
-    NewConnection
+    Init,
+    Listening
 }
 
 const SERVER: Token = Token(0);
@@ -29,22 +28,23 @@ impl Future for Main {
 
     fn poll(&mut self, reactor: &mut Self::Reactor, waker: Self::Waker) {
         match self {
-            Main::Start => {
-                        let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 7777));
-                        let listener = TcpListener::bind(addr).unwrap();
-                        reactor.add_event(SERVER, waker, listener);
-                        *self = Main::NewConnection;
+            Main::Init => {
+                let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 7777));
+                let listener = TcpListener::bind(addr).unwrap();
+                reactor.add_event(SERVER, waker, listener);
+                *self = Main::Listening;
+            }
+            Main::Listening => {
+                        
                     },
-            Main::NewConnection => {
-                println!("Things are working")
-            },
         }
 
     }
 }
 
 fn main() {
+    println!("Starting up...");
     let mut scheduler: LocalScheduler = LocalScheduler::new();
-    scheduler.spawn(Main::Start);
+    scheduler.spawn(Main::Init);
     scheduler.run();
 }

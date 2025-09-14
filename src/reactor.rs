@@ -1,4 +1,3 @@
-use crate::future::Future;
 use crate::waker::{LocalWaker, Waker};
 use mio::{event, Events, Interest, Poll, Token};
 use std::collections::HashMap;
@@ -35,12 +34,12 @@ impl Reactor for LocalReactor {
         let mut events = Events::with_capacity(1024);
         self.poller.poll(&mut events, Option::None);
         for event in events.iter() {
-            match self.fd_to_waker.remove(&event.token()) {
-                Some((_, waker)) => waker.wake(),
-                None => {
-                    println!("Token not found in Hashmap! {:?}", event.token())
+                match self.fd_to_waker.remove(&event.token()) {
+                    Some((_, waker)) => waker.wake(),
+                    None => {
+                        println!("Token not found in Hashmap! {:?}", event.token())
+                    }
                 }
-            }
         }
     }
     
