@@ -17,7 +17,7 @@ use crate::reactor::{LocalReactor, Reactor};
 
 enum Main {
     Init,
-    Listening
+    Listening(Option<TcpListener>)
 }
 
 const SERVER: Token = Token(0);
@@ -30,13 +30,16 @@ impl Future for Main {
         match self {
             Main::Init => {
                 let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 7777));
-                let listener = TcpListener::bind(addr).unwrap();
-                reactor.add_event(SERVER, waker, listener);
-                *self = Main::Listening;
+                let mut listener = TcpListener::bind(addr).unwrap();
+                reactor.add_event(SERVER, waker, &mut listener);
+                *self = Main::Listening(Some(listener));
             }
-            Main::Listening => {
-                        
-                    },
+            Main::Listening(listener) => {
+                let listener = listener.take().unwrap();
+                let (stream, addr) = listener.accept().unwrap();
+                
+                reactor.register_waker(SERVER, waker);
+            },
         }
 
     }

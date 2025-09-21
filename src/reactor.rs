@@ -2,18 +2,20 @@ use crate::waker::{LocalWaker, Waker};
 use mio::{event, Events, Interest, Poll, Token};
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::rc::Rc;
 
 pub trait Reactor {
     type Id: Eq + Hash;
     type Waker: Waker;
 
     fn wait(&mut self);
-    fn add_event<T: event::Source + 'static>(&mut self, event_id: Self::Id, waker: Self::Waker, event: T);
-    fn remove_event(&mut self, event_id: Self::Id);
+    fn add_event<T: event::Source + 'static>(&mut self, event_id: Self::Id, waker: Self::Waker, event: &mut T);
+    fn register_waker(&mut self, event_id: Self::Id, waker: Self::Waker);
+    fn remove_event<T: event::Source + 'static>(&mut self, event_id: Self::Id, event: &mut T);
 }
 
 pub struct LocalReactor {
-    fd_to_waker: HashMap<Token, (Box<dyn event::Source>, LocalWaker)>,
+    fd_to_waker: HashMap<Token, LocalWaker>,
     poller: Poll,
 }
 
@@ -35,7 +37,9 @@ impl Reactor for LocalReactor {
         self.poller.poll(&mut events, Option::None);
         for event in events.iter() {
                 match self.fd_to_waker.remove(&event.token()) {
-                    Some((_, waker)) => waker.wake(),
+                    Some(waker) => {
+                        waker.wake();
+                    },
                     None => {
                         println!("Token not found in Hashmap! {:?}", event.token())
                     }
@@ -43,16 +47,21 @@ impl Reactor for LocalReactor {
         }
     }
     
-    fn add_event<T: event::Source + 'static>(&mut self, event_id: Self::Id, waker: Self::Waker, mut event: T) {
+    fn add_event<T: event::Source + 'static>(&mut self, event_id: Self::Id, waker: Self::Waker, event: &mut T) {
         self.poller.registry().register(
-            &mut event,
+            event,
             event_id,
             Interest::READABLE | Interest::WRITABLE,
         );
-        self.fd_to_waker.insert(event_id, (Box::new(event), waker));
+        self.fd_to_waker.insert(event_id, waker);
+    }
+
+    fn register_waker(&mut self, event_id: Self::Id, waker: Self::Waker) {
+        self.fd_to_waker.insert(event_id, waker);
     }
     
-    fn remove_event(&mut self, event_id: Self::Id) {
-        self.fd_to_waker.remove(&event_id);
+    fn remove_event<T: event::Source + 'static>(&mut self, event_id: Self::Id, event: &mut T) {
+        self.fd_to_waker.remove(&event_id).unwrap();
+        self.poller.registry().deregister(event);
     }
 }
